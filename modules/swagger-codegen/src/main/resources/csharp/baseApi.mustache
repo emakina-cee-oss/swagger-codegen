@@ -1,0 +1,147 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using RestSharp;
+using Newtonsoft.Json;
+
+namespace {{invokerPackage}} {
+
+    public interface IApiInjector
+    {
+        event Func<object, EventArgs, Task> Begin;
+        event Func<object, UnhandledExceptionEventArgs, Task> Exception;
+        event Func<object, EventArgs, Task> End;
+
+        bool StopOnError { get; set; }
+    }
+
+    public abstract class BaseApi : IApiInjector
+    {
+        public event Func<object, EventArgs, Task> Begin;
+        public event Func<object, UnhandledExceptionEventArgs, Task> Exception;
+        public event Func<object, EventArgs, Task> End;
+
+        protected string basePath;
+        public bool StopOnError { get; set; }
+
+        /// <summary>
+        /// Sets the base path of the API client.
+        /// </summary>
+        /// <value>The base path</value>
+        public void SetBasePath(String basePath) {
+            this.apiClient.basePath = basePath;
+        }
+
+        /// <summary>
+        /// Gets the base path of the API client.
+        /// </summary>
+        /// <value>The base path</value>
+        public String GetBasePath(String basePath) {
+            return this.apiClient.basePath;
+        }
+
+        /// <summary>
+        /// Gets or sets the API client.
+        /// </summary>
+        /// <value>The API client</value>
+        public ApiClient apiClient {get; set;}
+
+        protected BaseApi(ApiClient apiClient = null)
+        {
+            if (apiClient == null) { // use the default one in Configuration
+                this.apiClient = Configuration.apiClient;
+            } else {
+                this.apiClient = apiClient;
+            }
+            this.basePath = basePath;
+        }
+
+        protected BaseApi(String basePath)
+        {
+            this.apiClient = new ApiClient(basePath);
+            this.basePath = basePath;
+        }
+
+        protected virtual T ExecuteCall<T>(String Path, RestSharp.Method Method, Dictionary<String, String> QueryParams, String PostBody,
+    Dictionary<String, String> HeaderParams, Dictionary<String, String> FormParams, Dictionary<String, String> FileParams, String[] AuthSettings) where T : new()
+        {
+            var response = Task.Run(async () => {
+                                        var resp = await ExecuteCallAsync<T>(Path, Method, QueryParams, PostBody, HeaderParams, FormParams, FileParams, AuthSettings);
+                                        return resp;
+                                        });
+            return response.Result;
+        }
+
+        protected virtual async Task<T> ExecuteCallAsync<T>(String path, RestSharp.Method method, Dictionary<String, String> queryParams, String postBody,
+            Dictionary<String, String> headerParams, Dictionary<String, String> formParams, Dictionary<String, String> fileParams, String[] authSettings) where T : new()
+        {
+            T response = default(T);
+            Exception exc = null;
+
+            await ExecuteHandler(Begin);
+
+            try
+            {
+                // make the HTTP request
+                IRestResponse restResponse = (IRestResponse) apiClient.CallApi(path, method, queryParams, postBody, headerParams, formParams, fileParams, authSettings);
+
+                if (((int)restResponse.StatusCode) >= 400) {
+                    throw new ApiException ((int)restResponse.StatusCode, "Error calling {{nickname}}: " + restResponse.Content, restResponse.Content);
+                }
+
+                response = JsonConvert.DeserializeObject<T>(restResponse.Content);
+            }
+            catch (Exception ex)
+            {
+                exc = ex;
+            }
+
+            if (exc != null)
+            {
+                await ExecuteExceptionHandler(Exception, exc);
+            }
+
+            if (!StopOnError|| exc == null)
+            {
+                await ExecuteHandler(End);
+            }
+            return response;
+        }
+
+        private async Task ExecuteHandler(Func<object, EventArgs, Task> handler)
+        {
+            if (handler != null)
+            {
+                Delegate[] invocationList = handler.GetInvocationList();
+                Task[] handlerTasks = new Task[invocationList.Length];
+
+                for (int i = 0; i < invocationList.Length; i++)
+                {
+                    handlerTasks[i] = ((Func<object, EventArgs, Task>)invocationList[i])(this, EventArgs.Empty);
+                }
+
+                await Task.WhenAll(handlerTasks);
+            }
+        }
+
+        private async Task ExecuteExceptionHandler(Func<object, UnhandledExceptionEventArgs, Task> handler, Exception ex)
+        {
+            if (handler != null)
+            {
+                Delegate[] invocationList = handler.GetInvocationList();
+                Task[] handlerTasks = new Task[invocationList.Length];
+
+                for (int i = 0; i < invocationList.Length; i++)
+                {
+                    handlerTasks[i] = ((Func<object, UnhandledExceptionEventArgs, Task>)invocationList[i])(this, new UnhandledExceptionEventArgs(ex,true));
+                }
+
+                await Task.WhenAll(handlerTasks);
+            }
+            else
+            {
+                throw ex;
+            }
+        }
+    }
+}

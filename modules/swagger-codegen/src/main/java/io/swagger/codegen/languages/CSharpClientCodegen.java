@@ -40,6 +40,8 @@ public class CSharpClientCodegen extends DefaultCodegen implements CodegenConfig
                 (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "Configuration.cs"));
         supportingFiles.add(new SupportingFile("ApiClient.mustache",
                 (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiClient.cs"));
+        supportingFiles.add(new SupportingFile("baseApi.mustache",
+                (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "BaseApi.cs"));
         supportingFiles.add(new SupportingFile("ApiException.mustache",
                 (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiException.cs"));
         supportingFiles.add(new SupportingFile("Newtonsoft.Json.dll", "bin", "Newtonsoft.Json.dll"));
