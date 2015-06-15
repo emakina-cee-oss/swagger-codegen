@@ -13,7 +13,7 @@ namespace {{package}} {
   /// {{description}}
   /// </summary>
   [DataContract]
-  public class {{classname}} {
+  public partial class {{classname}} {
     {{#vars}}
     {{#description}}/* {{{description}}} */{{/description}}
     [DataMember(Name="{{baseName}}", EmitDefaultValue=false)]
