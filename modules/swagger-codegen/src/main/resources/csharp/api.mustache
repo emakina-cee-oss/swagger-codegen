@@ -32,6 +32,18 @@ namespace {{package}} {
   /// Represents a collection of functions to interact with the API endpoints
   /// </summary>
   public class {{classname}} : BaseApi, I{{classname}} {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="{{classname}}"/> class.
+    /// </summary>
+    /// <param name="apiClient"> an instance of ApiClient (optional)
+    /// <returns></returns>
+    public {{classname}}(ApiClient apiClient = null) {
+        if (apiClient == null) { // use the default one in Configuration
+            this.apiClient = Configuration.apiClient;
+        } else {
+            this.apiClient = apiClient;
+        }
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="{{classname}}"/> class.
