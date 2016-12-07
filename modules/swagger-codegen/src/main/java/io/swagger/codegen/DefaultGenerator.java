@@ -742,11 +742,6 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 CodegenOperation co = null;
                 try {
                     co = config.fromOperation(resourcePath, httpMethod, operation, swagger.getDefinitions(), swagger);
-                    Collections.sort(co.allParams, new ParamComparator());
-                    for (CodegenParameter cp : co.allParams) {
-                        cp.hasMore = true;
-                    }
-                    co.allParams.get(co.allParams.size() - 1).hasMore = false;
                     co.tags = new ArrayList<String>();
                     co.tags.add(config.sanitizeTag(tag));
                     config.addOperationToGroup(config.sanitizeTag(tag), resourcePath, operation, co, operations);
